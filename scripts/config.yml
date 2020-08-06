@@ -1,10 +1,10 @@
-working_directory: /usr/src/app/blankt2caom2
+working_directory: /usr/src/app/clean2caom2/int_test
 # the netrc_filename value must be a fully-qualified name
 # netrc_filename: /usr/src/app/netrc
 # this is the name of the proxy certificate file supplied 
 # to the container. It must be a fully-qualified name. 
 # One of netrc_filename or proxy_filename must have a value.
-proxy_file_name: /usr/src/app/cadcproxy.pem
+proxy_file_name: /usr/src/app/clean2caom2/int_test/proxy/cadcproxy.pem
 # operational value is ivo://cadc.nrc.ca/ams
 # - modifies entries on sc2.canfar.net
 resource_id: ivo://cadc.nrc.ca/sc2repo
@@ -17,13 +17,13 @@ todo_file_name: todo.txt
 # when True, the application will look for files with
 # .fits, .gz, .json endings as defining the work to be 
 # done.
-use_local_files: True
+use_local_files: False
 # values DEBUG INFO WARNING ERROR
-logging_level: DEBUG
+logging_level: INFO
 # values True False
 log_to_file: True
 # fully qualified name for a directory to write log files
-log_file_directory: /usr/src/app/logs
+log_file_directory: /usr/src/app/clean2caom2/int_test/logs
 # the filename where success logs are written
 #
 # this file is created in the logs directory, default is 'success_log.txt'
@@ -47,19 +47,19 @@ progress_file_name: progress.txt
 # ad stream value - sorry
 # set stream to 'default', if using TaskType STORE or PULL
 stream: default
-archive: BLANK
-collection: BLANK
+archive: NGVS
+collection: NGVS
 #
 # CADC service execution metrics
 #
 observe_execution: True
-observable_directory: /usr/src/app/metrics
+observable_directory: /usr/src/app/clean2caom2/int_test/metrics
 # 
 # if the pipeline for the collection tracks known failures, that occurs
 # in this location
 # 
 rejected_file_name: rejected.yml
-rejected_directory: /usr/src/app/rejected
+rejected_directory: /usr/src/app/clean2caom2/int_test/rejected
 #
 # for information that needs to be persisted between pipeline 
 # invocations, defaults to 'state.yml', and is found in 'working_directory'
@@ -79,10 +79,9 @@ interval: 600
 # - modify - create a footprint and previews for an existing CAOM model record
 # - pull - put a file retrieved from a URL
 task_types: 
-  - ingest
+  - visit
 features:
   supports_composite: False
-  supports_latest_caom: False
   supports_multiple_files: False
-  use_file_names: True
-  use_urls: False
+  use_file_names: False
+  use_urls: True

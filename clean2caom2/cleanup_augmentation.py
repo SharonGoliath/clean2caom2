@@ -3,7 +3,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2019.                            (c) 2019.
+#  (c) 2020.                            (c) 2020.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,12 +62,14 @@
 #  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 #                                       <http://www.gnu.org/licenses/>.
 #
-#  $Revision: 4 $
+#  : 4 $
 #
 # ***********************************************************************
 #
-from blank2caom2 import BlankName
+
+from caom2pipe import visitor_composable as vc
 
 
-def test_is_valid():
-    assert BlankName('anything').is_valid()
+def visit(observation, **kwargs):
+    visitor = vc.ArtifactCleanupVisitor('NGVS')
+    return visitor.visit(observation, **kwargs)

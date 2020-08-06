@@ -67,73 +67,55 @@
 # ***********************************************************************
 #
 
-from mock import patch
+"""
+Implements the default entry point functions for the workflow 
+application.
 
-from caom2.obs_reader_writer import CAOM24_NAMESPACE
-from blank2caom2 import main_app, APPLICATION, COLLECTION, BlankName
-from blank2caom2 import ARCHIVE
-from caom2pipe import manage_composable as mc
+'run' executes based on either provided lists of work, or files on disk.
+'run_by_state' executes incrementally, usually based on time-boxed 
+intervals.
+"""
 
-import glob
-import os
+import logging
 import sys
+import traceback
 
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-TEST_DATA_DIR = os.path.join(THIS_DIR, 'data')
-PLUGIN = os.path.join(os.path.dirname(THIS_DIR), 'main_app.py')
-
-
-def pytest_generate_tests(metafunc):
-    obs_id_list = glob.glob(f'{TEST_DATA_DIR}/*.fits.header')
-    metafunc.parametrize('test_name', obs_id_list)
+from caom2pipe import name_builder_composable as nbc
+from caom2pipe import run_composable as rc
+from clean2caom2 import cleanup_augmentation
+from ngvs2caom2 import storage_names
 
 
-@patch('caom2utils.fits2caom2.CadcDataClient')
-@patch('caom2pipe.astro_composable.get_vo_table')
-def test_main_app(vo_mock, data_client_mock, test_name):
-    basename = os.path.basename(test_name)
-    extension = '.fz'
-    file_name = basename.replace('.header', extension)
-    blank_name = BlankName(file_name=file_name)
-    obs_path = f'{TEST_DATA_DIR}/{blank_name.obs_id}.expected.xml'
-    output_file = f'{TEST_DATA_DIR}/{basename}.actual.xml'
+META_VISITORS = [cleanup_augmentation]
+DATA_VISITORS = []
 
-    if os.path.exists(output_file):
-        os.unlink(output_file)
 
-    local = _get_local(basename)
+def get_storage_name(file_name):
+    storage_name = storage_names.get_storage_name(file_name)
+    storage_name.url = file_name
+    return storage_name
 
-    data_client_mock.return_value.get_file_info.side_effect = _get_file_info
 
-    sys.argv = \
-        (f'{APPLICATION} --no_validate --caom_namespace {CAOM24_NAMESPACE} '
-         f'--local {local} --observation {COLLECTION} {blank_name.obs_id} -o '
-         f'{output_file} --plugin {PLUGIN} --module {PLUGIN} --lineage '
-         f'{_get_lineage(blank_name)}'
-         ).split()
-    print(sys.argv)
+def _run():
+    """
+    Uses a todo file to identify the work to be done.
+
+    :return 0 if successful, -1 if there's any sort of failure. Return status
+        is used by airflow for task instance management and reporting.
+    """
+    name_builder = nbc.FileNameBuilder(get_storage_name)
+    return rc.run_by_todo(name_builder=name_builder,
+                          meta_visitors=META_VISITORS,
+                          data_visitors=DATA_VISITORS)
+
+
+def run():
+    """Wraps _run in exception handling, with sys.exit calls."""
     try:
-        main_app.to_caom2()
+        result = _run()
+        sys.exit(result)
     except Exception as e:
-        import logging
-        import traceback
-        logging.error(traceback.format_exc())
-
-    compare_result = mc.compare_observations(output_file, obs_path)
-    if compare_result is not None:
-        raise AssertionError(compare_result)
-    # assert False  # cause I want to see logging messages
-
-
-def _get_file_info(archive, file_id):
-    return {'type': 'application/fits'}
-
-
-def _get_lineage(blank_name):
-    result = mc.get_lineage(ARCHIVE, blank_name.product_id,
-                            f'{blank_name.file_name}')
-    return result
-
-
-def _get_local(obs_id):
-    return f'{TEST_DATA_DIR}/{obs_id}.fits.header'
+        logging.error(e)
+        tb = traceback.format_exc()
+        logging.debug(tb)
+        sys.exit(-1)
